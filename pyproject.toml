@@ -15,10 +15,51 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = []
+dev-dependencies = [
+    "ruff>=0.14.11",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/compose_message"]
+
+[tool.ruff]
+# Maximum line length per line
+# Using 88 keeps it compatible with Ruff formatter and Black defaults
+line-length = 88
+
+# The minimum Python syntax version this project targets
+target-version = "py311"
+
+# Directories to exclude from linting and formatting
+# Virtual environments, build artefacts, and distribution outputs
+# should not be checked by Ruff
+exclude = [".git", ".venv", "dist", "build", "__pypackages__",]
+
+[tool.ruff.lint]
+# Enabled rule groups:
+# - E: Clear formatting and syntax errors (pycodestyle)
+# - F: Likely bugs such as unused imports or undefined names (pyflakes)
+# - I: Automatic import ordering (isort equivalent)
+# - UP: Upgrade older Python syntax to modern equivalents (pyupgrade)
+select = ["E", "F", "I", "UP"]
+
+# __init__.py files are commonly used to re-export public APIs.
+# In such cases, imports may appear unused within the file itself.
+per-file-ignores = { "__init__.py" = ["F401"] }
+
+[tool.ruff.format]
+# Use double quotes for string literals
+quote-style = "double"
+
+# Use spaces for indentation (no tabs)
+indent-style = "space"
+
+# Match Black-compatible behaviour for trailing commas
+skip-magic-trailing-comma = false
+
+# Automatically choose the appropriate line ending
+# for the current operating system
+line-ending = "auto"
