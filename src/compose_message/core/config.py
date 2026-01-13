@@ -29,8 +29,9 @@ Provider = Literal["ollama"]
 # Prompt style profiles used when generating commit messages.
 PromptProfile = Literal["default", "conventional"]
 
-# Scope selection strategies for Conventional Commits.
-ScopeMode = Literal["prompt", "auto", "fixed"]
+# How to handle the `scope` part of Conventional Commits
+# (e.g. include it automatically or omit it entirely).
+ScopeMode = Literal["auto", "none"]
 
 
 # Immutable configuration object used throughout the application.

@@ -5,9 +5,14 @@ description = "Add your description here"
 authors = [
     { name = "shou-taro", email = "rhyme.remedy-5k@icloud.com" }
 ]
-dependencies = []
+dependencies = [
+    "questionary>=2.1.1",
+]
 readme = "README.md"
 requires-python = ">= 3.8"
+
+[project.scripts]
+git-compose = "compose_message.cli:run_cli"
 
 [build-system]
 requires = ["hatchling"]
