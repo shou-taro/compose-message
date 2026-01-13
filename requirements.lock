@@ -10,3 +10,9 @@
 #   universal: false
 
 -e file:.
+prompt-toolkit==3.0.52
+    # via questionary
+questionary==2.1.1
+    # via compose-message
+wcwidth==0.2.14
+    # via prompt-toolkit
