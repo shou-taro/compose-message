@@ -1,0 +1,48 @@
+name: Ruff
+
+# When this workflow should run
+# - pull_request: when a pull request is opened or updated
+# - push: when changes are pushed to the main branch
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ruff:
+    # The execution environment provided by GitHub Actions
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository source code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Set up the Python runtime
+      # The CI uses Python 3.11 to match the Ruff target-version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Install Rye
+      # Enabling the cache helps speed up CI runs by reusing dependencies
+      - name: Install Rye
+        uses: eifinger/setup-rye@v4
+        with:
+          enable-cache: true
+
+      # Synchronise dependencies based on pyproject.toml and rye.lock
+      # This ensures the CI environment matches the local development setup
+      - name: Sync dependencies
+        run: rye sync
+
+      # Run Ruff lint checks
+      # This detects style issues and common sources of bugs
+      - name: Ruff lint
+        run: rye run ruff check .
+
+      # Run Ruff formatter in check mode
+      # The --check flag verifies formatting without modifying files
+      - name: Ruff format (check)
+        run: rye run ruff format --check .
