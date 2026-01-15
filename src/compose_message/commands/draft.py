@@ -133,7 +133,7 @@ def _draft_command(*, cwd: str | None) -> int:
     profile_label = (
         "Conventional" if config.prompt_profile == "conventional" else "Default"
     )
-    scope_label = "auto" if getattr(config, "scope_mode", "none") == "auto" else "none"
+    scope_label = "auto" if config.scope_strategy == "auto" else "omit"
 
     print()
     print("=" * 72)
@@ -163,13 +163,15 @@ def _draft_command(*, cwd: str | None) -> int:
         max_bytes=config.max_diff_bytes,
     )
 
+    # Scope is only relevant when using the Conventional profile.
+
     # Build a provider-agnostic prompt (system + user parts).
     parts = build_commit_message_prompt(
         staged_diff,
         status_porcelain=status,
         language=config.language,
         prompt_profile=config.prompt_profile,
-        scope_mode=config.scope_mode,
+        scope_strategy=config.scope_strategy,
     )
 
     print("🧠 Generating a draft message...")

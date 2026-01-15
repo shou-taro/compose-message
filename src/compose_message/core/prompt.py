@@ -6,7 +6,7 @@ from typing import Literal
 __all__ = [
     "Language",
     "PromptProfile",
-    "ScopeMode",
+    "ScopeStrategy",
     "PromptParts",
     "build_commit_message_prompt",
 ]
@@ -22,8 +22,8 @@ PromptProfile = Literal["default", "conventional"]
 
 # Scope handling strategy when using Conventional Commits.
 # - auto: include a scope inferred from the staged diff
-# - none: omit the scope entirely (use `type: subject`)
-ScopeMode = Literal["auto", "none"]
+# - omit: omit the scope entirely (use `type: subject`)
+ScopeStrategy = Literal["auto", "omit"]
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ def build_commit_message_prompt(
     max_subject_length: int = 72,
     language: Language = "en",
     prompt_profile: PromptProfile = "default",
-    scope_mode: ScopeMode = "none",
+    scope_strategy: ScopeStrategy = "omit",
 ) -> PromptParts:
     """Build a prompt for generating a Git commit message from staged changes.
 
@@ -64,7 +64,7 @@ def build_commit_message_prompt(
         language: Output language for the commit message.
         prompt_profile: Commit message style profile.
             Use "conventional" to request the Conventional Commits format.
-        scope_mode: Scope handling strategy for Conventional Commits.
+        scope_strategy: Scope handling strategy for Conventional Commits.
             Ignored when prompt_profile is "default".
 
     Returns:
@@ -74,7 +74,7 @@ def build_commit_message_prompt(
         ValueError: If `staged_diff` is empty or only whitespace.
         ValueError: If `language` is not supported.
         ValueError: If `prompt_profile` is not supported.
-        ValueError: If `scope_mode` is not supported.
+        ValueError: If `scope_strategy` is not supported.
     """
     if not staged_diff.strip():
         raise ValueError("staged_diff is required and must not be empty.")
@@ -88,8 +88,8 @@ def build_commit_message_prompt(
 
     if prompt_profile not in ("default", "conventional"):
         raise ValueError(f"Unsupported prompt_profile: {prompt_profile}")
-    if scope_mode not in ("auto", "none"):
-        raise ValueError(f"Unsupported scope_mode: {scope_mode}")
+    if scope_strategy not in ("auto", "omit"):
+        raise ValueError(f"Unsupported scope_strategy: {scope_strategy}")
 
     # System message: defines behaviour, constraints, and output rules.
     system_lines: list[str] = [
@@ -112,10 +112,10 @@ def build_commit_message_prompt(
     # Additional constraints for the Conventional Commits profile.
     if prompt_profile == "conventional":
         system_lines.append(templates.system_conventional_intro)
-        if scope_mode == "auto":
+        if scope_strategy == "auto":
             system_lines.append(templates.system_conventional_scope_auto)
         else:
-            system_lines.append(templates.system_conventional_scope_none)
+            system_lines.append(templates.system_conventional_scope_omit)
 
     system_lines.append(templates.system_accuracy)
     system_lines.append(templates.system_no_thoughts)
@@ -172,7 +172,7 @@ class _Template:
     system_plain: str
     system_conventional_intro: str
     system_conventional_scope_auto: str
-    system_conventional_scope_none: str
+    system_conventional_scope_omit: str
     user_intro: str
     user_format_title: str
     user_format_lines_default: list[str]
@@ -210,7 +210,7 @@ _TEMPLATES: dict[Language, _Template] = {
             "Include a scope and infer it from the diff "
             "(choose a short, meaningful scope)."
         ),
-        system_conventional_scope_none="Do not include a scope (use 'type: subject').",
+        system_conventional_scope_omit="Do not include a scope (use 'type: subject').",
         user_intro="Generate a commit message for the following staged changes.",
         user_format_title="Output format:",
         user_format_lines_default=[
@@ -259,7 +259,7 @@ _TEMPLATES: dict[Language, _Template] = {
         system_conventional_scope_auto=(
             "scope を含め、差分から短く意味のある scope を推測してください。"
         ),
-        system_conventional_scope_none=(
+        system_conventional_scope_omit=(
             "scope は含めず、type: subject の形式にしてください。"
         ),
         user_intro="以下のステージされた変更に対するコミットメッセージを生成してください。",
