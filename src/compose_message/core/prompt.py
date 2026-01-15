@@ -18,6 +18,7 @@ Language = Literal["en", "ja"]
 # Prompt profiles define the overall commit message style.
 # - default: a plain Git commit message
 # - conventional: Conventional Commits format (type(scope): subject)
+# with a bullet-list body
 PromptProfile = Literal["default", "conventional"]
 
 # Scope handling strategy when using Conventional Commits.
@@ -64,6 +65,7 @@ def build_commit_message_prompt(
         language: Output language for the commit message.
         prompt_profile: Commit message style profile.
             Use "conventional" to request the Conventional Commits format.
+            The body is required as a bullet list of changes.
         scope_strategy: Scope handling strategy for Conventional Commits.
             Ignored when prompt_profile is "default".
 
@@ -104,6 +106,7 @@ def build_commit_message_prompt(
     system_lines.append(
         templates.system_subject.format(max_subject_length=max_subject_length)
     )
+    system_lines.append(templates.system_body)
 
     # The imperative mood is customary for English commit messages.
     if language == "en":
@@ -120,6 +123,8 @@ def build_commit_message_prompt(
     system_lines.append(templates.system_accuracy)
     system_lines.append(templates.system_no_thoughts)
     system_lines.append(templates.system_plain)
+    if templates.system_output_language:
+        system_lines.append(templates.system_output_language)
 
     system = "\n".join(system_lines)
 
@@ -166,10 +171,12 @@ class _Template:
     system_task_default: str
     system_task_conventional: str
     system_subject: str
+    system_body: str
     system_imperative: str
     system_accuracy: str
     system_no_thoughts: str
     system_plain: str
+    system_output_language: str
     system_conventional_intro: str
     system_conventional_scope_auto: str
     system_conventional_scope_omit: str
@@ -190,11 +197,16 @@ _TEMPLATES: dict[Language, _Template] = {
             "Write a Git commit message that accurately reflects the staged changes."
         ),
         system_task_conventional=(
-            "Write a Conventional Commits message"
-            " that accurately reflects the staged changes."
+            "Write a Conventional Commits message with an emoji prefix "
+            "that accurately reflects the staged changes."
         ),
         system_subject=(
             "The first line (subject) must be <= {max_subject_length} characters."
+        ),
+        system_body=(
+            "After the subject line, add a blank line. "
+            "Then output the line 'Changes:' and a bullet list of changes using '- '. "
+            "The body must contain at least one bullet."
         ),
         system_imperative="Use the imperative mood (e.g. 'Add', 'Fix', 'Refactor').",
         system_accuracy="Avoid mentioning details not present in the diff.",
@@ -203,8 +215,11 @@ _TEMPLATES: dict[Language, _Template] = {
             "Output the commit message only."
         ),
         system_plain="Output plain text only. Do not include Markdown code fences.",
+        system_output_language="",
         system_conventional_intro=(
-            "Use Conventional Commits: type(scope): subject or type: subject."
+            "The subject line must start with an emoji "
+            "and follow Conventional Commits: '<emoji> type(scope): subject' "
+            "or '<emoji> type: subject'. The emoji must be the first token."
         ),
         system_conventional_scope_auto=(
             "Include a scope and infer it from the diff "
@@ -214,17 +229,19 @@ _TEMPLATES: dict[Language, _Template] = {
         user_intro="Generate a commit message for the following staged changes.",
         user_format_title="Output format:",
         user_format_lines_default=[
-            "1) Subject line",
-            "2) Optional blank line",
-            "3) Optional body explaining the 'what' and 'why' (keep it concise)",
+            "1) Subject line starting with an emoji: <emoji> Subject",
+            "2) Blank line",
+            "3) Body starting with 'Changes:' followed by a bullet list of changes "
+            "using '- ' (at least one bullet)",
         ],
         user_format_lines_conventional=[
-            "1) Subject line in Conventional Commits format: type(scope): subject or "
-            "type: subject",
-            "2) Optional blank line",
-            "3) Optional body explaining the 'what' and 'why' (keep it concise)",
-            "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, "
-            "revert",
+            "1) Subject line in Conventional Commits format starting "
+            "with an emoji: <emoji> type(scope): subject or <emoji> type: subject",
+            "2) Blank line",
+            "3) Body starting with 'Changes:' followed by a bullet list of changes "
+            "using '- ' (at least one bullet)",
+            "Types: feat, fix, docs, style, refactor, perf, test, build, ci, "
+            "chore, revert",
         ],
         user_status_title="Repository status (porcelain):",
         user_diff_title="Staged diff:",
@@ -237,24 +254,33 @@ _TEMPLATES: dict[Language, _Template] = {
         ),
         system_task_conventional=(
             "以下のステージ差分に基づき、"
-            "Conventional Commits 形式のコミットメッセージを作成してください。"
+            "絵文字 (emoji) を先頭に付けた Conventional Commits 形式の"
+            "コミットメッセージを作成してください。"
         ),
         system_subject=(
             "1行目（件名）は {max_subject_length} 文字以内を目安に簡潔にしてください。"
         ),
+        system_body=(
+            "件名の後に必ず空行を入れ、その次の行に「変更内容:」と書いてください。"
+            "その後に「- 」で始まる箇条書きで変更内容を記載してください。"
+            "本文は最低1つの箇条書きを含めてください。"
+        ),
         system_imperative="",  # Not used for Japanese.
         system_accuracy="差分に含まれない内容を推測して断定しないでください。",
         system_no_thoughts=(
-            "思考過程（分析・推論）や独り言（例: 'Thinking...'）は出力せず、"
+            "思考過程 (分析・推論) や独り言 (例: 'Thinking...') は出力せず、"
             "コミットメッセージ本文のみを出力してください。"
         ),
         system_plain=(
             "出力はプレーンテキストのみとし、"
             "Markdown のコードブロック (```) は使わないでください。"
         ),
+        system_output_language="コミットメッセージは日本語で書いて下さい。",
         system_conventional_intro=(
-            "Conventional Commits 形式 (type(scope): subject または type: subject) "
-            "に従ってください。"
+            "件名は絵文字（emoji）を先頭に付けた形式で、"
+            "「<emoji> type(scope): subject」または「<emoji> type: subject」の"
+            "いずれかにしてください。"
+            "絵文字は件名の最初に必ず配置してください。"
         ),
         system_conventional_scope_auto=(
             "scope を含め、差分から短く意味のある scope を推測してください。"
@@ -265,19 +291,23 @@ _TEMPLATES: dict[Language, _Template] = {
         user_intro="以下のステージされた変更に対するコミットメッセージを生成してください。",
         user_format_title="出力形式:",
         user_format_lines_default=[
-            "1) 1行目: 件名",
-            "2) （任意）空行",
-            "3) （任意）本文: 変更内容（何を）と意図（なぜ）を簡潔に",
+            "1) 件名行は絵文字を先頭に付けてください: <emoji> タイプ(スコープ): 件名 "
+            "または <emoji> タイプ: 件名",
+            "2) 空行",
+            "3) 本文は「変更内容:」の行から始め、その後に「- 」で始まる箇条書きで"
+            "変更内容を記載してください (最低1つ)",
         ],
         user_format_lines_conventional=[
-            "1) 1行目: Conventional Commits 形式（type(scope): subject "
-            "または type: subject）",
-            "2) （任意）空行",
-            "3) （任意）本文: 変更内容（何を）と意図（なぜ）を簡潔に",
+            "1) 件名行は絵文字を先頭に付けた "
+            "Conventional Commits 形式: <emoji> type(scope): subject "
+            "または <emoji> type: subject",
+            "2) 空行",
+            "3) 本文は「変更内容:」の行から始め、その後に「- 」で始まる箇条書きで"
+            "変更内容を記載してください (最低1つ)",
             "type の例: feat, fix, docs, style, refactor, perf, test, build, ci, "
             "chore, revert",
         ],
-        user_status_title="リポジトリ状態（porcelain）:",
+        user_status_title="リポジトリ状態 (porcelain):",
         user_diff_title="ステージ差分:",
     ),
 }
