@@ -7,7 +7,9 @@ import questionary
 from compose_message.core import git as git_mod
 from compose_message.core.config import (
     Config,
+    DefaultAction,
     Provider,
+    ScopeStrategy,
     global_config_path,
     repo_config_path,
     save_config,
@@ -28,8 +30,8 @@ def init_wizard(*, local: bool) -> int:
     The wizard asks a fixed set of questions in a stable order and persists the
     result to a TOML file. The target file depends on the `local` flag:
 
-    - local=False: global config (applies to all repositories by default)
-    - local=True:  repo config (overrides global config for this repository)
+    - local=False: global config
+    - local=True:  repository-local config
 
     Args:
         local: If True, write repository-local config into the current Git
@@ -53,16 +55,14 @@ def init_wizard(*, local: bool) -> int:
             git_mod.get_repo_root() if hasattr(git_mod, "get_repo_root") else None
         )
         if repo_root is None:
-            # If `get_repo_root()` is not available, fall back to the current directory.
-            # This assumes `init --local` is run from the repository root.
+            # Fall back to the current directory.
             repo_root = str(Path.cwd())
 
         target_path = repo_config_path(repo_root)
         target_label = "Repository"
 
     else:
-        # Global config follows the XDG base directory convention on Unix-like systems.
-        # The filename is intentionally stable and human-editable.
+        # Global config is stored under the user's config directory.
         target_path = global_config_path()
         target_label = "Global"
 
@@ -82,9 +82,9 @@ def init_wizard(*, local: bool) -> int:
     print("  1. 🌐 Language")
     print("  2. 🧩 Provider")
     print("  3. 🧠 Model")
-    print("  4. ✅ Auto-commit")
+    print("  4. ✅ Default action")
     print("  5. 🧾 Conventional Commits")
-    print("  6. 🏷️  Scope mode")
+    print("  6. 🏷️  Scope")
     print("  7. 📦 Max diff size")
     print("  8. ✍️  Editor")
     print()
@@ -117,7 +117,7 @@ def init_wizard(*, local: bool) -> int:
         print("Cancelled.")
         return 1
 
-    # 2) Provider
+    # 2) Provider (v0.1: Ollama only)
     print("\n🧩 Provider")
     provider: Provider = questionary.select(
         "Select provider:",
@@ -128,7 +128,7 @@ def init_wizard(*, local: bool) -> int:
         print("Cancelled.")
         return 1
 
-    # 3) Model (installed locally via `ollama list`)
+    # 3) Model (from `ollama list`)
     if provider == "ollama":
         if not ollama_mod.has_ollama():
             print(
@@ -155,18 +155,21 @@ def init_wizard(*, local: bool) -> int:
             return 1
 
     else:
-        # Defensive default for future providers.
         print(f"Unsupported provider: {provider}")
         return 2
 
-    # 4) Auto-commit behaviour
-    print("\n✅ Auto-commit")
-    auto_commit = questionary.confirm(
-        "Commit automatically after generating a message?:",
+    # 4) Default action in the draft command's "Next step" menu
+    print("\n✅ Default action")
+    default_action: DefaultAction = questionary.select(
+        "Select the default action in the Next step menu:",
         qmark=QMARK,
-        default=False,
+        choices=[
+            questionary.Choice("✍️  Edit (recommended)", value="edit"),
+            questionary.Choice("✅ Commit now", value="commit"),
+        ],
+        default="edit",
     ).ask()
-    if auto_commit is None:
+    if default_action is None:
         print("Cancelled.")
         return 1
 
@@ -186,25 +189,25 @@ def init_wizard(*, local: bool) -> int:
     # 6) Scope handling for Conventional Commits
     if use_conventional:
         print("\n🏷️  Scope")
-        scope_mode = questionary.select(
+        scope_strategy: ScopeStrategy = questionary.select(
             "Include a scope in commit messages?:",
             qmark=QMARK,
             choices=[
                 questionary.Choice(
                     "Include scope (try to infer automatically)", value="auto"
                 ),
-                questionary.Choice("Do not include scope", value="none"),
+                questionary.Choice("Do not include scope", value="omit"),
             ],
             default="auto",
         ).ask()
-        if scope_mode is None:
+        if scope_strategy is None:
             print("Cancelled.")
             return 1
     else:
-        # Scope is not applicable when Conventional Commits are disabled.
-        scope_mode = "none"
+        # Scope is only relevant when Conventional Commits are enabled.
+        scope_strategy = "omit"
 
-    # 7) Guardrails for large diffs
+    # 7) Maximum diff size included in prompts
     print("\n📦 Max diff size")
     max_diff_bytes_str = questionary.text(
         "Maximum diff bytes to include in prompts:",
@@ -218,7 +221,7 @@ def init_wizard(*, local: bool) -> int:
 
     max_diff_bytes = int(max_diff_bytes_str)
 
-    # 8) Editor used for message editing
+    # 8) Editor used to edit the generated message
     print("\n✍️  Editor")
     editor = questionary.select(
         "Select editor for message editing:",
@@ -238,20 +241,20 @@ def init_wizard(*, local: bool) -> int:
     print(f"  ✅ Language: {language!r}")
     print(f"  ✅ Provider: {provider!r}")
     print(f"  ✅ Model: {model!r}")
-    print(f"  ✅ Auto-commit: {'on' if auto_commit else 'off'}")
+    print(f"  ✅ Default action: {default_action}")
     print(f"  ✅ Conventional: {'on' if use_conventional else 'off'}")
-    print(f"  ✅ Scope mode: {scope_mode}")
+    print(f"  ✅ Scope: {scope_strategy}")
     print(f"  ✅ Max diff: {max_diff_bytes}")
-    print(f"  ✅ Editor: {editor}")
+    print(f"  ✅ Editor: {editor!r}")
 
     # Persist the configuration in a stable order to keep diffs readable.
     config = Config(
         language=language,
         provider=provider,
         model=model,
-        auto_commit=auto_commit,
+        default_action=default_action,
         prompt_profile=prompt_profile,
-        scope_mode=scope_mode,
+        scope_strategy=scope_strategy,
         max_diff_bytes=max_diff_bytes,
         editor=editor,
     )

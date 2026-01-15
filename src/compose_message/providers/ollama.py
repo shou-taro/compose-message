@@ -5,17 +5,20 @@ import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+# Public API of the Ollama provider.
+# These symbols are imported by higher-level commands and the CLI.
 __all__ = [
     "OllamaError",
     "OllamaCommandResult",
     "has_ollama",
     "list_models",
+    "generate",
     "run_model",
 ]
 
 
 class OllamaError(RuntimeError):
-    """Raised when Ollama is unavailable or an Ollama command fails."""
+    """Error raised when Ollama is unavailable or a command fails."""
 
 
 @dataclass(frozen=True)
@@ -41,12 +44,12 @@ def _run_ollama(
     env: dict[str, str] | None = None,
     input_text: str | None = None,
 ) -> OllamaCommandResult:
-    """Runs an Ollama command and returns its output.
+    """Run an Ollama CLI command and return its result.
 
     This helper keeps all subprocess handling consistent across the project:
     - Text mode is always enabled.
     - Output is captured for CLI-friendly error messages.
-    - Errors are surfaced as `OllamaError`.
+    - Failures are reported as `OllamaError`.
 
     Args:
         args: Ollama arguments (without the leading `ollama`).
@@ -63,7 +66,8 @@ def _run_ollama(
     """
     cmd = ["ollama", *args]
 
-    # Keep behaviour predictable in CI and different shells.
+    # Merge environment variables explicitly so behaviour is consistent
+    # across shells and CI environments.
     merged_env = dict(os.environ)
     if env:
         merged_env.update(env)
@@ -83,8 +87,7 @@ def _run_ollama(
             "ollama command not found. Please install Ollama and ensure it is on PATH."
         ) from e
 
-    # For stdout, we only remove trailing newlines so we do not accidentally
-    # alter leading whitespace in generated text.
+    # Remove trailing newlines from stdout without touching leading whitespace.
     stdout = (completed.stdout or "").rstrip("\n")
     stderr = (completed.stderr or "").strip()
 
@@ -98,11 +101,7 @@ def _run_ollama(
 
 
 def has_ollama() -> bool:
-    """Checks whether the `ollama` command is available.
-
-    Returns:
-        True if `ollama` can be executed; otherwise False.
-    """
+    """Return True if the `ollama` CLI command is available."""
     try:
         res = _run_ollama(["--version"], check=False)
         return res.returncode == 0
@@ -111,10 +110,10 @@ def has_ollama() -> bool:
 
 
 def list_models() -> list[str]:
-    """Lists locally installed Ollama models.
+    """Return a list of locally installed Ollama models.
 
-    This parses `ollama list`, which prints a simple table. We only depend on the
-    first column (NAME), which is stable and is the value accepted by `ollama run`.
+    This function parses the output of `ollama list` and extracts the model
+    names accepted by `ollama run`.
 
     Returns:
         A list of model names (e.g. `["llama3.1:8b", "qwen2.5:7b"]`).
@@ -129,17 +128,15 @@ def list_models() -> list[str]:
     if not lines:
         return []
 
-    # `ollama list` usually prints a header like:
-    # NAME  ID  SIZE  MODIFIED
-    # We skip it defensively if detected.
+    # `ollama list` usually prints a header row; skip it if present.
     header = lines[0].lower()
     if header.startswith("name") and "id" in header:
         lines = lines[1:]
 
     models: list[str] = []
     for ln in lines:
-        # First whitespace-separated token is the model name.
-        # Example: "llama3.1:8b  123abc  4.7 GB  2 weeks ago"
+        # Example line format:
+        # llama3.1:8b  123abc  4.7 GB  2 weeks ago
         parts = ln.split()
         if parts:
             models.append(parts[0])
@@ -153,10 +150,9 @@ def run_model(
     *,
     max_bytes: int | None = None,
 ) -> str:
-    """Runs an Ollama model with the given prompt and returns the generated text.
+    """Run an Ollama model with a prompt and return the generated text.
 
-    We call `ollama run <model> <prompt>` and capture stdout. This keeps the
-    integration dependency-free (no SDK), which is ideal for a small CLI tool.
+    This function invokes `ollama run` directly, without using an SDK.
 
     Args:
         model: The model name to run (e.g. `llama3.1:8b`).
@@ -175,7 +171,7 @@ def run_model(
     if not prompt.strip():
         raise OllamaError("Prompt is required.")
 
-    # NOTE: Using arguments (not a shell) avoids quoting issues and is safer.
+    # Use a direct subprocess call (no shell) to avoid quoting issues.
     res = _run_ollama(["run", model, prompt], check=True)
     text = res.stdout
 
@@ -186,3 +182,42 @@ def run_model(
             text = truncated + "\n\n[output truncated]\n"
 
     return text
+
+
+def generate(
+    *,
+    model: str,
+    system: str,
+    user: str,
+    max_bytes: int | None = None,
+) -> str:
+    """Generate text using separate system and user prompts.
+
+    Ollama's CLI accepts a single prompt string. This helper combines the
+    system and user prompts into a stable plain-text format before invoking
+    the model.
+
+    Args:
+        model: The model name to run (e.g. `llama3.1:8b`).
+        system: System prompt text (instructions and constraints).
+        user: User prompt text (task input, such as staged diffs).
+        max_bytes: If set, truncate the output to at most this many bytes.
+
+    Returns:
+        Generated text (possibly truncated).
+
+    Raises:
+        OllamaError: If the model execution fails.
+    """
+
+    # Combine prompts in a simple, explicit format so behaviour is reproducible.
+    combined = "\n\n".join(
+        [
+            "[system]",
+            system.strip(),
+            "[user]",
+            user.strip(),
+        ]
+    ).strip()
+
+    return run_model(model, combined, max_bytes=max_bytes)

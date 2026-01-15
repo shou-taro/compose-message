@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from importlib import metadata
 
+from compose_message.commands.draft import draft_command
 from compose_message.commands.init import init_wizard
 
 
@@ -62,6 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write configuration scoped to the current repository.",
     )
 
+    _ = subparsers.add_parser(
+        "draft",
+        help="Draft a commit message from staged changes.",
+        description=(
+            "Generate a commit message draft from staged diffs and open it in your "
+            "configured editor for review."
+        ),
+    )
+
     # Keep the version flag at the top level for discoverability.
     parser.add_argument(
         "--version",
@@ -90,8 +100,7 @@ def run_cli(argv: list[str] | None = None) -> int:
         return init_wizard(local=getattr(args, "local", False))
 
     if args.command == "draft":
-        print("draft: not implemented yet")
-        return 0
+        return draft_command()
 
     # No subcommand provided: show help and exit successfully.
     parser.print_help()

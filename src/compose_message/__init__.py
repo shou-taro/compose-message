@@ -1,2 +1,3 @@
-def hello() -> str:
-    return "Hello from compose-message!"
+"""compose-message package."""
+
+__all__: list[str] = []
