@@ -1,5 +1,9 @@
 {
     "[python]": {
+        // ------------------------------
+        // Python formatting and linting (Ruff)
+        // ------------------------------
+        
         // Use Ruff as the default formatter for Python files
         "editor.defaultFormatter": "charliermarsh.ruff",
 
@@ -11,5 +15,22 @@
         "editor.codeActionsOnSave": {
             "source.fixAll.ruff": "explicit"
         }
-    }
+    },
+    // ------------------------------
+    // Python testing configuration
+    // ------------------------------
+
+    // Use pytest as the test runner
+    // This project relies on pytest for unit, integration, and e2e tests
+    "python.testing.pytestEnabled": true,
+
+    // Disable unittest discovery to avoid mixed test frameworks
+    // and keep test execution consistent across environments
+    "python.testing.unittestEnabled": false,
+
+    // Arguments passed to pytest when running tests from VS Code
+    // Restricts test discovery to the `tests/` directory
+    "python.testing.pytestArgs": [
+        "tests"
+    ]
 }
