@@ -83,6 +83,31 @@ def _clean_model_output(text: str) -> str:
     return "\n".join(cleaned).strip()
 
 
+def _get_current_branch(*, cwd: str | None) -> str | None:
+    """Return the current Git branch name, if available.
+
+    Args:
+        cwd: Working directory to run Git commands in.
+
+    Returns:
+        Branch name (e.g. "main", "feature/x") or None if it cannot be determined
+        (e.g. detached HEAD or Git error).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        return None
+
+    branch = result.stdout.strip()
+    return branch or None
+
+
 def draft_command(*, cwd: str | None = None) -> int:
     """Run the `git compose draft` command.
 
@@ -123,6 +148,7 @@ def _draft_command(*, cwd: str | None) -> int:
         return 1
 
     repo_root = get_repo_root(cwd=cwd)
+    branch = _get_current_branch(cwd=cwd)
 
     if not has_staged_changes(cwd=cwd):
         print("No staged changes found. Stage files first (e.g. `git add -p`).")
@@ -137,10 +163,13 @@ def _draft_command(*, cwd: str | None) -> int:
 
     print()
     print("=" * 72)
-    print("git compose · Draft")
+    print("🎼 git-compose · Draft")
+    print()
     print("Turn staged diffs into a commit message draft.")
     print()
     print(f"📁 Repository: {repo_root}")
+    if branch:
+        print(f"🌿 Branch: {branch}")
     print(f"⚙️  Config: {config_path}")
     print("🔧 Settings:")
     print(f"   • Model: {config.model}")
