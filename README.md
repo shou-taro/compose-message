@@ -18,7 +18,6 @@ A CLI tool that generates **structured commit message drafts** from staged chang
   width="800"
 />
 
-
 ## ❓ Why
 
 - Commit messages remain in the history for a long time, so readability and consistency are important.
