@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import subprocess
 import tempfile
 from pathlib import Path
 
@@ -10,6 +8,8 @@ import questionary
 from compose_message.core.config import Config, load_effective_config
 from compose_message.core.git import (
     GitError,
+    commit_with_message,
+    get_current_branch,
     get_repo_root,
     get_staged_diff,
     get_status_porcelain,
@@ -123,6 +123,7 @@ def _draft_command(*, cwd: str | None) -> int:
         return 1
 
     repo_root = get_repo_root(cwd=cwd)
+    branch = get_current_branch(cwd=cwd)
 
     if not has_staged_changes(cwd=cwd):
         print("No staged changes found. Stage files first (e.g. `git add -p`).")
@@ -137,10 +138,13 @@ def _draft_command(*, cwd: str | None) -> int:
 
     print()
     print("=" * 72)
-    print("git compose · Draft")
+    print("🎼 git-compose · Compose Draft")
+    print()
     print("Turn staged diffs into a commit message draft.")
     print()
     print(f"📁 Repository: {repo_root}")
+    if branch:
+        print(f"🌿 Branch: {branch}")
     print(f"⚙️  Config: {config_path}")
     print("🔧 Settings:")
     print(f"   • Model: {config.model}")
@@ -232,7 +236,7 @@ def _draft_command(*, cwd: str | None) -> int:
             print("  git commit")
             return 0
 
-    _git_commit_message(message, cwd=cwd)
+    commit_with_message(message, cwd=cwd)
     print("✅ Commit created.")
     return 0
 
@@ -311,6 +315,8 @@ def _open_editor(path: Path, *, editor: str, cwd: str) -> None:
         raise RuntimeError(f"Unsupported editor: {editor}")
 
     try:
+        import subprocess
+
         subprocess.run(cmd, cwd=cwd, check=True)
     except FileNotFoundError as e:
         raise RuntimeError(
@@ -318,43 +324,3 @@ def _open_editor(path: Path, *, editor: str, cwd: str) -> None:
         ) from e
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Editor exited with a non-zero status: {editor}") from e
-
-
-def _git_commit_message(message: str, *, cwd: str | None) -> None:
-    """Create a Git commit using the provided commit message.
-
-    Args:
-        message: Final commit message.
-        cwd: Working directory to run Git in.
-
-    Raises:
-        GitError: If `git commit` fails.
-    """
-    # Use -F with a temp file to preserve formatting.
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".txt",
-        delete=False,
-    ) as f:
-        path = Path(f.name)
-        f.write(message.rstrip() + "\n")
-
-    env = os.environ.copy()
-    # Avoid prompts from Git helpers; commit should fail fast.
-    env.setdefault("GIT_TERMINAL_PROMPT", "0")
-
-    try:
-        subprocess.run(
-            ["git", "commit", "-F", str(path)],
-            cwd=cwd,
-            env=env,
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        raise GitError("git commit failed.") from e
-    finally:
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            pass

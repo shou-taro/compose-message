@@ -72,7 +72,8 @@ def init_wizard(*, local: bool) -> int:
     # Print a brief overview so users know what will be configured.
     print()
     print("=" * 72)
-    print(f"git compose · Setup ({target_label})")
+    print(f"🎼 git-compose · Setup ({target_label})")
+    print()
     if local:
         print(f"Repository root: {repo_root}")
     print("Let's configure how commit messages are generated.")

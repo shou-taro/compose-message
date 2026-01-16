@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -12,6 +13,8 @@ __all__ = [
     "get_status_porcelain",
     "has_staged_changes",
     "get_staged_diff",
+    "get_current_branch",
+    "commit_with_message",
 ]
 
 
@@ -241,3 +244,69 @@ def get_staged_diff(
             diff_text = truncated + "\n\n[diff truncated]\n"
 
     return diff_text
+
+
+def get_current_branch(*, cwd: str | None = None) -> str | None:
+    """Return the current branch name, if available.
+
+    This uses `git branch --show-current`. When HEAD is detached, Git returns an
+    empty string; in that case this function returns None.
+
+    Args:
+        cwd: Working directory. If None, uses the current directory.
+
+    Returns:
+        Branch name (e.g. "main", "feat/draft") or None if it cannot be
+        determined.
+    """
+
+    try:
+        name = _run_git(
+            ["branch", "--show-current"], cwd=cwd, check=True
+        ).stdout.strip()
+    except GitError:
+        return None
+
+    return name or None
+
+
+def commit_with_message(message: str, *, cwd: str | None = None) -> None:
+    """Create a Git commit using the given commit message.
+
+    This writes the message to a temporary file and runs `git commit -F <file>`.
+    Using `-F` avoids invoking an interactive editor and is suitable for CLI
+    automation.
+
+    Args:
+        message: Commit message text.
+        cwd: Working directory. If None, uses the current directory.
+
+    Raises:
+        GitError: If Git fails to create the commit.
+        ValueError: If `message` is empty or whitespace only.
+    """
+
+    if not message.strip():
+        raise ValueError("message must be non-empty.")
+
+    tmp_path: str | None = None
+
+    # NamedTemporaryFile on Windows cannot always be re-opened by another process
+    # when delete=True, so we create it with delete=False and clean up ourselves.
+    tmp = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False)
+    try:
+        tmp.write(message)
+        if not message.endswith("\n"):
+            tmp.write("\n")
+        tmp.flush()
+        tmp_path = tmp.name
+        tmp.close()
+
+        _run_git(["commit", "-F", tmp_path], cwd=cwd, check=True)
+    finally:
+        try:
+            if tmp_path:
+                os.unlink(tmp_path)
+        except OSError:
+            # Best effort cleanup. The commit has already been created.
+            pass
