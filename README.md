@@ -12,6 +12,13 @@
 
 A CLI tool that generates **structured commit message drafts** from staged changes.
 
+<img
+  src="docs/assets/draft-preview.png"
+  alt="git-compose draft command showing preview and interactive flow"
+  width="800"
+/>
+
+
 ## ❓ Why
 
 - Commit messages remain in the history for a long time, so readability and consistency are important.

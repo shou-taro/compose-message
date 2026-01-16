@@ -12,6 +12,12 @@
 
 ステージ済み差分から、**構造化されたコミットメッセージの下書き** を生成する CLI ツールです。
 
+<img
+  src="docs/assets/draft-preview.png"
+  alt="git-compose draft command showing preview and interactive flow"
+  width="800"
+/>
+
 
 ## ❓ Why
 
