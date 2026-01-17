@@ -35,7 +35,7 @@ def _print_preview(message: str) -> None:
 
     print()
     print("=" * 72)
-    print("📝 Preview")
+    print("👀 Preview")
     print("-" * 72)
     print(message.rstrip())
     print("=" * 72)
@@ -145,7 +145,7 @@ def _draft_command(*, cwd: str | None) -> int:
     print(f"📁 Repository: {repo_root}")
     if branch:
         print(f"🌿 Branch: {branch}")
-    print(f"⚙️  Config: {config_path}")
+    print(f"📄 Config: {config_path}")
     print("🔧 Settings:")
     print(f"   • Model: {config.model}")
     print(f"   • Profile: {profile_label}")
@@ -153,8 +153,8 @@ def _draft_command(*, cwd: str | None) -> int:
     print()
     print("Flow:")
     print("  1. 🧠 Generate")
-    print("  2. 📝 Preview")
-    print("  3. ✍️  Edit / 🔄 Regenerate")
+    print("  2. 👀 Preview")
+    print("  3. 📝 Edit / 🔁 Regenerate")
     print("  4. ✅ Commit (optional)")
     print("=" * 72)
     print()
@@ -195,8 +195,8 @@ def _draft_command(*, cwd: str | None) -> int:
             "Next step:",
             qmark=QMARK,
             choices=[
-                questionary.Choice("✍️  Edit", value="edit"),
-                questionary.Choice("🔄 Regenerate", value="regen"),
+                questionary.Choice("📝 Edit", value="edit"),
+                questionary.Choice("🔁 Regenerate", value="regen"),
                 questionary.Choice("✅ Commit now", value="commit"),
                 questionary.Choice("🚪 Exit (no commit)", value="exit"),
             ],
@@ -208,7 +208,7 @@ def _draft_command(*, cwd: str | None) -> int:
             return 1
 
         if action == "regen":
-            print("🧠 Regenerating...")
+            print("\n🧠 Regenerating...")
             message = _generate_with_provider(config, parts.system, parts.user)
             message = _clean_model_output(message)
             if not message.strip():
@@ -232,8 +232,8 @@ def _draft_command(*, cwd: str | None) -> int:
             break
 
         if action == "exit":
-            print("\nDraft generated. You can commit later with:")
-            print("  git commit")
+            print("\n🚪 Exited without committing.")
+            print("You can run this command again when you're ready.")
             return 0
 
     commit_with_message(message, cwd=cwd)
