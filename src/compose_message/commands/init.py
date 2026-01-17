@@ -80,14 +80,14 @@ def init_wizard(*, local: bool) -> int:
     print(f"Config file: {target_path}")
     print()
     print("We'll ask you about:")
-    print("  1. 🌐 Language")
+    print("  1. 🌍 Language")
     print("  2. 🧩 Provider")
     print("  3. 🧠 Model")
-    print("  4. ✅ Default action")
-    print("  5. 🧾 Conventional Commits")
-    print("  6. 🏷️  Scope")
+    print("  4. ⭐ Default action")
+    print("  5. 📜 Conventional Commits")
+    print("  6. 🏷  Scope")
     print("  7. 📦 Max diff size")
-    print("  8. ✍️  Editor")
+    print("  8. 🧰 Editor")
     print()
     print("Tip: You can re-run this wizard at any time to update the settings.")
     print("=" * 72)
@@ -96,7 +96,8 @@ def init_wizard(*, local: bool) -> int:
     # Avoid accidental overwrites by confirming when a config file already exists.
     if target_path.exists():
         overwrite = questionary.confirm(
-            "A configuration file already exists. Overwrite it?",
+            "A configuration file already exists. Overwrite it?:",
+            qmark=QMARK,
             default=False,
         ).ask()
         if overwrite is None or overwrite is False:
@@ -105,7 +106,7 @@ def init_wizard(*, local: bool) -> int:
         print()
 
     # 1) Language (output locale)
-    print("🌐 Language")
+    print("🌍 Language")
     language = questionary.select(
         "Select output language:",
         qmark=QMARK,
@@ -123,7 +124,7 @@ def init_wizard(*, local: bool) -> int:
     provider: Provider = questionary.select(
         "Select provider:",
         qmark=QMARK,
-        choices=[questionary.Choice("Ollama", value="ollama")],
+        choices=[questionary.Choice("🦙 Ollama", value="ollama")],
     ).ask()
     if provider is None:
         print("Cancelled.")
@@ -160,12 +161,12 @@ def init_wizard(*, local: bool) -> int:
         return 2
 
     # 4) Default action in the draft command's "Next step" menu
-    print("\n✅ Default action")
+    print("\n⭐ Default action")
     default_action: DefaultAction = questionary.select(
         "Select the default action in the Next step menu:",
         qmark=QMARK,
         choices=[
-            questionary.Choice("✍️  Edit (recommended)", value="edit"),
+            questionary.Choice("📝 Edit (recommended)", value="edit"),
             questionary.Choice("✅ Commit now", value="commit"),
         ],
         default="edit",
@@ -175,7 +176,7 @@ def init_wizard(*, local: bool) -> int:
         return 1
 
     # 5) Conventional Commits support
-    print("\n🧾 Commit message style")
+    print("\n📜 Commit message style")
     use_conventional = questionary.confirm(
         "Use Conventional Commits format?:",
         qmark=QMARK,
@@ -189,15 +190,13 @@ def init_wizard(*, local: bool) -> int:
 
     # 6) Scope handling for Conventional Commits
     if use_conventional:
-        print("\n🏷️  Scope")
+        print("\n🏷  Scope")
         scope_strategy: ScopeStrategy = questionary.select(
             "Include a scope in commit messages?:",
             qmark=QMARK,
             choices=[
-                questionary.Choice(
-                    "Include scope (try to infer automatically)", value="auto"
-                ),
-                questionary.Choice("Do not include scope", value="omit"),
+                questionary.Choice("🤖 Auto-detect scope from changes", value="auto"),
+                questionary.Choice("🚫 Do not use scope", value="omit"),
             ],
             default="auto",
         ).ask()
@@ -223,7 +222,7 @@ def init_wizard(*, local: bool) -> int:
     max_diff_bytes = int(max_diff_bytes_str)
 
     # 8) Editor used to edit the generated message
-    print("\n✍️  Editor")
+    print("\n🧰 Editor")
     editor = questionary.select(
         "Select editor for message editing:",
         qmark=QMARK,

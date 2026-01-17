@@ -27,8 +27,8 @@ A CLI tool that generates **structured commit message drafts** from staged chang
 ## ✨ Features
 
 - 🧠 Generate commit messages from staged changes
-- 📝 Interactive flow: preview → edit → regenerate
-- 🧾 Support for Conventional Commits (optional)
+- 👀 Interactive flow: preview → edit → regenerate
+- 📜 Support for Conventional Commits (optional)
 - 📐 Standardised body structure to prevent inconsistency
 - 🔒 Local LLM execution using Ollama (no external API required)
 - 🔌 Planned support for multiple LLM providers such as OpenAI, Gemini, Claude
@@ -78,8 +78,8 @@ git compose draft
 
 ```
 1. 🧠 Generate
-2. 📝 Preview
-3. ✍️  Edit / 🔄 Regenerate
+2. 👀 Preview
+3. 📝 Edit / 🔁 Regenerate
 4. ✅ Commit (optional)
 ```
 

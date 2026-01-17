@@ -28,8 +28,8 @@
 ## ✨ 特徴
 
 - 🧠 ステージ済み差分からコミットメッセージを生成
-- 📝 プレビュー → 編集 → 再生成の対話的フロー
-- 🧾 Conventional Commits 対応 (任意)
+- 👀 プレビュー → 編集 → 再生成の対話的フロー
+- 📜 Conventional Commits 対応 (任意)
 - 📐 本文構造を標準化し、書き方のブレを防止
 - 🔒 Ollama を利用したローカル LLM 実行 (外部 API 不要)
 - 🔌 今後 OpenAI / Gemini / Claude など複数の LLM プロバイダに対応予定
@@ -81,8 +81,8 @@ git compose draft
 
 ```
 1. 🧠 Generate
-2. 📝 Preview
-3. ✍️  Edit / 🔄 Regenerate
+2. 👀 Preview
+3. 📝 Edit / 🔁 Regenerate
 4. ✅ Commit (optional)
 ```
 
