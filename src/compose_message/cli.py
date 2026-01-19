@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from importlib import metadata
 
 from compose_message.commands.draft import draft_command
@@ -26,6 +27,11 @@ def _package_version() -> str:
 
 
 VERSION = f"git-compose {_package_version()}"
+
+
+def _eprint(message: str) -> None:
+    """Print a message to stderr."""
+    print(message, file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -93,18 +99,29 @@ def run_cli(argv: list[str] | None = None) -> int:
     """
     parser = build_parser()
 
-    # Parse arguments and dispatch to the selected subcommand.
-    args = parser.parse_args(argv)
+    try:
+        # Parse arguments and dispatch to the selected subcommand.
+        args = parser.parse_args(argv)
 
-    if args.command == "init":
-        return init_wizard(local=getattr(args, "local", False))
+        if args.command == "init":
+            return init_wizard(local=getattr(args, "local", False))
 
-    if args.command == "draft":
-        return draft_command()
+        if args.command == "draft":
+            return draft_command()
 
-    # No subcommand provided: show help and exit successfully.
-    parser.print_help()
-    return 0
+        # No subcommand provided: show help and exit successfully.
+        parser.print_help()
+        return 0
+
+    except KeyboardInterrupt:
+        # POSIX convention: 128 + SIGINT(2) = 130
+        # Let subcommands or the UI layer handle any cancellation message.
+        return 130
+    except Exception as exc:
+        # Keep behaviour deterministic for users and tests.
+        # Detailed tracebacks should be handled behind an explicit debug flag.
+        _eprint(f"Error: {exc}")
+        return 1
 
 
 if __name__ == "__main__":
