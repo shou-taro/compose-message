@@ -1,3 +1,11 @@
+<p align="center">
+  <img 
+    src="docs/assets/logo.png" 
+    alt="git-compose logo" 
+    width="750"
+  />
+</p>
+
 # 🎼 git-compose — Compose Better Commit Messages
 
 [![CI](https://github.com/shou-taro/compose-message/actions/workflows/ruff.yml/badge.svg)](https://github.com/shou-taro/compose-message/actions)
@@ -140,6 +148,7 @@ git-compose は以下を目的としていません：
 ## 📦 現在の制限 (v0.1)
 
 - 現在対応している LLM プロバイダは Ollama のみ（将来的に拡張予定）
+  - Ollama をローカルにインストールし、起動している必要があります
 - コミットメッセージテンプレートの外部ファイル化は未対応
 - pytest による単体テストは今後追加予定
 

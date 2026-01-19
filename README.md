@@ -1,3 +1,11 @@
+<p align="center">
+  <img 
+    src="docs/assets/logo.png" 
+    alt="git-compose logo" 
+    width="750"
+  />
+</p>
+
 # 🎼 git-compose — Compose Better Commit Messages
 
 [![CI](https://github.com/shou-taro/compose-message/actions/workflows/ruff.yml/badge.svg)](https://github.com/shou-taro/compose-message/actions)
@@ -133,6 +141,7 @@ git-compose is not intended for:
 ## 📦 Current Limitations (v0.1)
 
 - Currently only supports the Ollama LLM provider (planned to expand)
+  - Ollama must be installed and running locally
 - External files for commit message templates are not supported yet
 - Unit tests with pytest will be added in the future
 
