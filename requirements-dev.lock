@@ -10,8 +10,17 @@
 #   universal: false
 
 -e file:.
+iniconfig==2.3.0
+    # via pytest
+packaging==25.0
+    # via pytest
+pluggy==1.6.0
+    # via pytest
 prompt-toolkit==3.0.52
     # via questionary
+pygments==2.19.2
+    # via pytest
+pytest==9.0.2
 questionary==2.1.1
     # via compose-message
 ruff==0.14.11

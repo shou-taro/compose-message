@@ -1,7 +1,7 @@
 [project]
 name = "compose-message"
 version = "0.1.0"
-description = "Add your description here"
+description = "Compose commit messages from staged diffs using LLMs."
 authors = [
     { name = "shou-taro", email = "rhyme.remedy-5k@icloud.com" }
 ]
@@ -22,6 +22,7 @@ build-backend = "hatchling.build"
 managed = true
 dev-dependencies = [
     "ruff>=0.14.11",
+    "pytest>=9.0.2",
 ]
 
 [tool.hatch.metadata]
@@ -68,3 +69,28 @@ skip-magic-trailing-comma = false
 # Automatically choose the appropriate line ending
 # for the current operating system
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+# Directories that pytest will search for tests
+# Limiting discovery to `tests/` keeps test runs predictable
+# and avoids accidentally collecting example or utility files
+# elsewhere in the repository
+testpaths = ["tests"]
+
+# Custom markers used to categorise tests
+# - unit: fast, isolated tests with no external dependencies
+# - e2e: end-to-end tests that execute the CLI as a subprocess
+# Markers make it easy to select or exclude test groups
+# (e.g. `pytest -m unit`)
+markers = [
+  "unit: fast, isolated tests",
+  "e2e: executes the CLI as a subprocess",
+]
+
+# Additional default options passed to pytest
+# -q: quiet output, showing only essential information
+# --disable-warnings: suppress warning output to keep logs readable
+addopts = [
+  "-q",
+  "--disable-warnings",
+]
