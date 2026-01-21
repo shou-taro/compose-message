@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import sys
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import questionary
@@ -18,12 +21,58 @@ from compose_message.core.git import (
 )
 from compose_message.core.prompt import build_commit_message_prompt
 from compose_message.providers import ollama
+from compose_message.providers.ollama import OllamaError
 
 __all__ = ["draft_command"]
 
 
 # Prompt marker used by questionary (kept consistent across commands).
 QMARK = "❯"
+
+
+def _eprint(message: str) -> None:
+    """Print a message to stderr."""
+    print(message, file=sys.stderr)
+
+
+@contextmanager
+def _suppress_ctrl_c_echo() -> Iterator[None]:
+    """Best-effort suppression of the terminal '^C' echo (ECHOCTL).
+
+    On many POSIX terminals, pressing Ctrl+C prints '^C' as part of the line
+    discipline (ECHOCTL). This helper temporarily disables that behaviour so
+    cancellation output stays clean. It is a no-op when stdin is not a TTY or
+    when the platform does not support termios.
+    """
+    if not sys.stdin.isatty():
+        yield
+        return
+
+    try:
+        import termios  # POSIX only
+    except Exception:
+        yield
+        return
+
+    fd = sys.stdin.fileno()
+    try:
+        old = termios.tcgetattr(fd)
+    except Exception:
+        yield
+        return
+
+    new = old[:]
+    try:
+        # lflag is index 3; clear ECHOCTL if available.
+        if hasattr(termios, "ECHOCTL"):
+            new[3] = new[3] & ~termios.ECHOCTL
+            termios.tcsetattr(fd, termios.TCSADRAIN, new)
+        yield
+    finally:
+        try:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        except Exception:
+            pass
 
 
 def _print_preview(message: str) -> None:
@@ -102,10 +151,21 @@ def draft_command(*, cwd: str | None = None) -> int:
     try:
         return _draft_command(cwd=cwd)
     except GitError as e:
-        print(f"Git error: {e}")
-        return 2
+        # External command failure (git)
+        _eprint(f"Git error: {e}")
+        return 1
+    except (FileNotFoundError, ValueError) as e:
+        # Config loading / validation failures should not show tracebacks by default.
+        _eprint(f"Error: {e}")
+        return 1
+    except (OllamaError, RuntimeError) as e:
+        # LLM provider / runtime failures should be reported without a traceback.
+        _eprint(f"Error: {e}")
+        return 1
     except KeyboardInterrupt:
-        print("Cancelled.")
+        # POSIX convention: 128 + SIGINT(2) = 130
+        # Align cancellation wording with Questionary's default message.
+        _eprint("Cancelled by user")
         return 130
 
 
@@ -119,17 +179,20 @@ def _draft_command(*, cwd: str | None) -> int:
         Process exit code.
     """
     if not is_git_repo(cwd=cwd):
-        print("Not a Git repository. Run this command inside a repository.")
+        _eprint("Not a Git repository. Run this command inside a repository.")
         return 1
 
     repo_root = get_repo_root(cwd=cwd)
     branch = get_current_branch(cwd=cwd)
 
     if not has_staged_changes(cwd=cwd):
-        print("No staged changes found. Stage files first (e.g. `git add -p`).")
+        _eprint("No staged changes found. Stage files first (e.g. git add -p).")
         return 1
 
     config, config_path = load_effective_config(repo_root)
+
+    if config is None or config_path is None:
+        raise ValueError("Configuration could not be loaded.")
 
     profile_label = (
         "Conventional" if config.prompt_profile == "conventional" else "Default"
@@ -179,10 +242,11 @@ def _draft_command(*, cwd: str | None) -> int:
     )
 
     print("🧠 Generating a draft message...")
-    message = _generate_with_provider(config, parts.system, parts.user)
+    with _suppress_ctrl_c_echo():
+        message = _generate_with_provider(config, parts.system, parts.user)
     message = _clean_model_output(message)
     if not message.strip():
-        print("The provider returned an empty response.")
+        _eprint("The provider returned an empty response.")
         return 1
 
     # Interactive loop: preview -> choose an action -> apply it
@@ -204,15 +268,15 @@ def _draft_command(*, cwd: str | None) -> int:
         ).ask()
 
         if action is None:
-            print("Cancelled.")
-            return 1
+            return 130
 
         if action == "regen":
             print("\n🧠 Regenerating...")
-            message = _generate_with_provider(config, parts.system, parts.user)
+            with _suppress_ctrl_c_echo():
+                message = _generate_with_provider(config, parts.system, parts.user)
             message = _clean_model_output(message)
             if not message.strip():
-                print("The provider returned an empty response.")
+                _eprint("The provider returned an empty response.")
                 return 1
             continue
 
@@ -223,7 +287,7 @@ def _draft_command(*, cwd: str | None) -> int:
                 repo_root=repo_root,
             )
             if not edited.strip():
-                print("Commit message is empty after editing. Cancelled.")
+                _eprint("Commit message is empty after editing.")
                 return 1
             message = _clean_model_output(edited)
             continue

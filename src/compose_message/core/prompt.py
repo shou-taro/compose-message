@@ -194,7 +194,8 @@ _TEMPLATES: dict[Language, _Template] = {
     "en": _Template(
         system_role="You are a senior software engineer.",
         system_task_default=(
-            "Write a Git commit message that accurately reflects the staged changes."
+            "Write a Git commit message with an emoji-prefixed, typed subject line "
+            "that accurately reflects the staged changes."
         ),
         system_task_conventional=(
             "Write a Conventional Commits message with an emoji prefix "
@@ -229,7 +230,7 @@ _TEMPLATES: dict[Language, _Template] = {
         user_intro="Generate a commit message for the following staged changes.",
         user_format_title="Output format:",
         user_format_lines_default=[
-            "1) Subject line starting with an emoji: <emoji> Subject",
+            "1) Subject line starting with an emoji and a type: <emoji> type: subject",
             "2) Blank line",
             "3) Body starting with 'Changes:' followed by a bullet list of changes "
             "using '- ' (at least one bullet)",
@@ -250,6 +251,7 @@ _TEMPLATES: dict[Language, _Template] = {
         system_role="あなたは経験豊富なソフトウェアエンジニアです。",
         system_task_default=(
             "以下のステージ差分に基づき、"
+            "件名に絵文字（emoji）と type を含め、scope は付けない形式で、"
             "適切な Git のコミットメッセージを作成してください。"
         ),
         system_task_conventional=(
@@ -258,7 +260,7 @@ _TEMPLATES: dict[Language, _Template] = {
             "コミットメッセージを作成してください。"
         ),
         system_subject=(
-            "1行目（件名）は {max_subject_length} 文字以内を目安に簡潔にしてください。"
+            "1行目（件名）は {max_subject_length} 文字以内にしてください。"
         ),
         system_body=(
             "件名の後に必ず空行を入れ、その次の行に「変更内容:」と書いてください。"
@@ -291,8 +293,7 @@ _TEMPLATES: dict[Language, _Template] = {
         user_intro="以下のステージされた変更に対するコミットメッセージを生成してください。",
         user_format_title="出力形式:",
         user_format_lines_default=[
-            "1) 件名行は絵文字を先頭に付けてください: <emoji> タイプ(スコープ): 件名 "
-            "または <emoji> タイプ: 件名",
+            "1) 件名行は絵文字を先頭に付け、type を含めてください: <emoji> type: 件名",
             "2) 空行",
             "3) 本文は「変更内容:」の行から始め、その後に「- 」で始まる箇条書きで"
             "変更内容を記載してください (最低1つ)",
